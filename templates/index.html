@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AI SmartCart – Price Intelligence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}">
+</head>
+<body>
+
+<header class="header">
+  <div class="header-inner">
+    <div class="logo">
+      <span class="logo-icon">◈</span>
+      <span class="logo-text">AI<strong>SmartCart</strong></span>
+    </div>
+    <div class="header-right">
+      <div class="live"><div class="dot"></div><span class="live-label">LIVE TRACKING</span></div>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+        <div class="toggle-thumb"><span id="toggleEmoji">☀️</span></div>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="main">
+
+  <!-- Track Input -->
+  <section class="track-card">
+    <div class="track-label">TRACK A PRODUCT</div>
+    <div class="track-row">
+      <input type="text" id="urlInput" class="track-input" placeholder="Paste Amazon product URL…" autocomplete="off"/>
+      <button class="track-btn" id="trackBtn">
+        <span id="trackBtnText">ANALYZE</span>
+        <span id="trackBtnLoader" class="hidden">⟳</span>
+      </button>
+    </div>
+    <div id="trackError" class="track-error hidden"></div>
+  </section>
+
+  <!-- Result Section (shown after tracking) -->
+  <section id="resultSection" class="hidden">
+
+    <!-- Anomaly Banner -->
+    <div id="anomalyBanner" class="anomaly-banner hidden">
+      <div class="anomaly-pulse">⚡</div>
+      <div class="anomaly-text">
+        <div class="anomaly-title">PRICE ANOMALY DETECTED</div>
+        <div class="anomaly-desc">Unusual price movement vs. historical range — treat this signal with caution.</div>
+      </div>
+      <div class="anomaly-tag">+2σ deviation</div>
+    </div>
+
+    <!-- Signal Card -->
+    <div class="signal-card" id="signalCard">
+      <div class="signal-icon-wrap">
+        <div class="signal-icon-pulse"></div>
+        <div class="signal-icon-ring"></div>
+        <div class="signal-icon-bg" id="signalEmoji"></div>
+      </div>
+      <div class="signal-body">
+        <div class="signal-name" id="signalName"></div>
+        <div class="signal-product-title" id="resultTitle"></div>
+        <div class="signal-reason" id="signalReason"></div>
+      </div>
+      <div class="signal-stats" id="resultStats"></div>
+    </div>
+
+    <!-- Chart -->
+    <div class="chart-card">
+      <div class="chart-top">
+        <span class="chart-lbl">PRICE HISTORY + 7-DAY FORECAST</span>
+        <div class="chart-legend">
+          <div class="leg"><div class="leg-dot" style="background:#F5A623"></div>Historical</div>
+          <div class="leg"><div class="leg-dot" style="background:#4FD1C5"></div>Forecast</div>
+        </div>
+      </div>
+      <div class="chart-wrap"><canvas id="resultChart"></canvas></div>
+    </div>
+
+  </section>
+
+  <!-- Tracked Products -->
+  <section class="products-section">
+    <div class="sec-header">
+      <span class="sec-title">TRACKED PRODUCTS</span>
+      <span class="sec-count">{{ products|length }} active</span>
+    </div>
+
+    {% if products %}
+    <div class="products-grid">
+      {% for p in products %}
+      <div class="product-card signal-{{ p.recommendation | lower | replace(' ', '-') }}"
+           onclick="loadProduct({{ p.id }})">
+        <div class="card-top">
+          <span class="card-asin">{{ p.asin or ('ID-' ~ p.id) }}</span>
+          <span class="signal-badge {{ p.recommendation | lower | replace(' ', '-') }}">
+            {% if p.recommendation == 'BUY NOW' %}🎯{% elif p.recommendation == 'GOOD DEAL' %}💎{% elif p.recommendation == 'OVERPRICED' %}⚠️{% else %}⏳{% endif %}
+            {{ p.recommendation }}
+          </span>
+        </div>
+        <div class="card-title">{{ p.title[:70] }}{% if p.title|length > 70 %}…{% endif %}</div>
+        <div class="card-prices">
+          <div class="pb"><div class="pb-lbl">NOW</div><div class="pb-val">{{ p.currency or '₹' }}{{ "%.2f"|format(p.last_known_price or 0) }}</div></div>
+          <div class="pb"><div class="pb-lbl">PREDICTED</div><div class="pb-val">{{ p.currency or '₹' }}{{ "%.2f"|format(p.predicted_price_7d or 0) }}</div></div>
+          <div class="pb"><div class="pb-lbl">ANOMALY</div><div class="pb-val {% if p.anomaly_flag %}high{% endif %}">{{ '⚡ YES' if p.anomaly_flag else 'NO' }}</div></div>
+        </div>
+        <div class="card-updated">Updated {{ (p.last_scraped_at or p.updated_at or '')[:10] }}</div>
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">◈</div>
+      <div class="empty-text">No products tracked yet. Paste an Amazon URL above to begin.</div>
+    </div>
+    {% endif %}
+  </section>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html>
